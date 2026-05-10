@@ -1,0 +1,36 @@
+{
+    "name": "fueled/idempotent-export",
+    "description": "WP-CLI command that exports a WordPress site as a deterministic tree of JSON files.",
+    "type": "wp-cli-package",
+    "license": "MIT",
+    "require": {
+        "php": "^8.1"
+    },
+    "require-dev": {
+        "pestphp/pest": "^2.34",
+        "phpunit/phpunit": "^10.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "IdempotentExport\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "IdempotentExport\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "pest",
+        "test:unit": "pest --testsuite=Unit",
+        "test:feature": "pest --testsuite=Feature"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

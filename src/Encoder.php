@@ -77,7 +77,15 @@ class Encoder {
 		// allowed_classes=false avoids instantiating arbitrary user classes (unserialize
 		// gadget surface) and gives us a consistent __PHP_Incomplete_Class shape that
 		// the recursive object cast then flattens to an associative array.
-		$result = @unserialize( $value, array( 'allowed_classes' => false ) );
+		//
+		// A custom error handler is installed (rather than relying on @) because PHPUnit's
+		// strict mode bypasses the silence operator for E_NOTICE/E_WARNING.
+		set_error_handler( static function () { return true; } );
+		try {
+			$result = unserialize( $value, array( 'allowed_classes' => false ) );
+		} finally {
+			restore_error_handler();
+		}
 		if ( false === $result && 'b:0;' !== rtrim( $value ) ) {
 			return new DecodeFailure();
 		}
