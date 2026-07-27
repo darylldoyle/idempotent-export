@@ -45,11 +45,14 @@ it('requires a path on non-VIP environments', function (): void {
 it('resolves relative paths against the current working directory', function (): void {
     $tmpRoot = tmpdir();
     @mkdir($tmpRoot, 0777, true);
-    $oldCwd = getcwd();
+    // resolve() builds the path from getcwd(), which reports the canonical path:
+    // on macOS /var is a symlink to /private/var, so compare against realpath.
+    $expected = realpath($tmpRoot);
+    $oldCwd   = getcwd();
     chdir($tmpRoot);
     try {
         $resolved = Output::resolve(['snapshot'], []);
-        expect($resolved)->toStartWith(rtrim($tmpRoot, '/\\'));
+        expect($resolved)->toStartWith(rtrim($expected, '/\\'));
         expect($resolved)->toEndWith('snapshot');
     } finally {
         chdir($oldCwd);
