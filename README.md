@@ -1,5 +1,7 @@
 # WP Idempotent Export
 
+[![Tests](https://github.com/darylldoyle/idempotent-export/actions/workflows/tests.yml/badge.svg)](https://github.com/darylldoyle/idempotent-export/actions/workflows/tests.yml)
+
 A WP-CLI command that exports a single WordPress site as a deterministic
 directory tree of JSON files, designed to be re-imported into another
 WordPress site **without** wiping the destination between runs.
