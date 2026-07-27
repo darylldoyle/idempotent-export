@@ -31,6 +31,7 @@ class FakeWpdb
     public string $comments          = 'wp_comments';
     public string $commentmeta       = 'wp_commentmeta';
     public string $options           = 'wp_options';
+    public string $base_prefix       = 'wp_';
 
     public PDO $pdo;
 
@@ -69,6 +70,11 @@ class FakeWpdb
             throw new \RuntimeException('FakeWpdb is not installed.');
         }
         return $GLOBALS['wpdb'];
+    }
+
+    public function get_blog_prefix(?int $blog_id = null): string
+    {
+        return $this->base_prefix;
     }
 
     /**

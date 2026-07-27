@@ -18,8 +18,14 @@ class Users extends AbstractExporter {
 	public function run() {
 		global $wpdb;
 
-		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->users}" );
-		$bar   = $this->progress( 'Users', $total );
+		// On multisite, users are network-global but roles are per-blog. Export only
+		// the members of the blog being exported, with their role for THIS blog
+		// canonicalised to wp_capabilities (see canonicalizeRoleMeta).
+		$multisite = is_multisite();
+		$capKey    = $multisite ? $wpdb->get_blog_prefix() . 'capabilities' : '';
+
+		$total  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->users}" );
+		$bar    = $this->progress( 'Users', $total );
 		$lastId = 0;
 
 		while ( true ) {
@@ -46,12 +52,19 @@ class Users extends AbstractExporter {
 				$userId = (int) $row['ID'];
 				$lastId = $userId;
 
+				$meta = isset( $metaByUser[ $userId ] ) ? $metaByUser[ $userId ] : array();
+				if ( $multisite && ! isset( $meta[ $capKey ] ) ) {
+					// Not a member of the exported blog; they belong to another site's snapshot.
+					continue;
+				}
+				$meta = $this->canonicalizeRoleMeta( $meta );
+
 				$row = $this->unslashRow( $row );
 
 				$data = array(
 					'ID'                  => $userId,
 					'display_name'        => (string) $row['display_name'],
-					'meta'                => isset( $metaByUser[ $userId ] ) ? $metaByUser[ $userId ] : new \stdClass(),
+					'meta'                => $meta ? $meta : new \stdClass(),
 					'user_activation_key' => (string) $row['user_activation_key'],
 					'user_email'          => (string) $row['user_email'],
 					'user_login'          => (string) $row['user_login'],
@@ -60,10 +73,6 @@ class Users extends AbstractExporter {
 					'user_status'         => (int) $row['user_status'],
 					'user_url'            => (string) $row['user_url'],
 				);
-
-				if ( is_array( $data['meta'] ) && empty( $data['meta'] ) ) {
-					$data['meta'] = new \stdClass();
-				}
 
 				$path = "users/{$userId}.json";
 
@@ -79,6 +88,38 @@ class Users extends AbstractExporter {
 		}
 
 		$bar->finish();
+	}
+
+	/**
+	 * On multisite, collapse the per-blog capability/level keys to canonical
+	 * wp_capabilities / wp_user_level for the blog being exported, and drop any
+	 * other blog's role keys (they belong to those sites' own snapshots). No-op on
+	 * single-site, where the keys are already canonical.
+	 *
+	 * @param array $meta
+	 * @return array
+	 */
+	private function canonicalizeRoleMeta( array $meta ) {
+		global $wpdb;
+		if ( ! is_multisite() ) {
+			return $meta;
+		}
+		$capKey  = $wpdb->get_blog_prefix() . 'capabilities';
+		$lvlKey  = $wpdb->get_blog_prefix() . 'user_level';
+		$pattern = '/^' . preg_quote( $wpdb->base_prefix, '/' ) . '(\d+_)?(capabilities|user_level)$/';
+		$out     = array();
+		foreach ( $meta as $key => $values ) {
+			if ( preg_match( $pattern, $key ) ) {
+				if ( $key === $capKey ) {
+					$out['wp_capabilities'] = $values;
+				} elseif ( $key === $lvlKey ) {
+					$out['wp_user_level'] = $values;
+				}
+				continue;
+			}
+			$out[ $key ] = $values;
+		}
+		return $out;
 	}
 
 	/**
@@ -98,13 +139,13 @@ class Users extends AbstractExporter {
 			 ORDER BY user_id ASC, meta_key ASC, umeta_id ASC",
 			ARRAY_A
 		);
-		$out = array();
+		$out    = array();
 		foreach ( (array) $rows as $r ) {
 			$key = (string) $r['meta_key'];
 			if ( in_array( $key, $this->strippedMeta, true ) ) {
 				continue;
 			}
-			$uid = (int) $r['user_id'];
+			$uid                   = (int) $r['user_id'];
 			$out[ $uid ][ $key ][] = $this->encoder->decodeStored( 'user', $uid, $key, (string) $r['meta_value'] );
 		}
 		return $out;
