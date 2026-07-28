@@ -59,8 +59,6 @@ class Users extends AbstractExporter {
 				}
 				$meta = $this->canonicalizeRoleMeta( $meta );
 
-				$row = $this->unslashRow( $row );
-
 				$data = array(
 					'ID'                  => $userId,
 					'display_name'        => (string) $row['display_name'],

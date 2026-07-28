@@ -3,10 +3,24 @@
 namespace IdempotentExport;
 
 /**
- * Handles the meta-value pipeline: unslash, maybe-unserialize, cast objects
+ * Handles the meta-value pipeline: maybe-unserialize containers, cast objects
  * down to arrays. Warns the Logger on lossy transforms.
+ *
+ * Values are taken verbatim from $wpdb. Stored data is *not* slashed — slashing
+ * is only WordPress's convention for data on its way *into* the insert/update
+ * APIs — so unslashing on the way out would destroy real backslashes.
  */
 class Encoder {
+
+	/**
+	 * How deep a decoded value may nest and still be written to the snapshot.
+	 *
+	 * Json::encode() and the importer's json_decode() both work to PHP's default
+	 * limit of 512, and a meta value sits several levels down inside its entity
+	 * (entity -> meta -> key -> values -> value). Accepting a value at the full 512
+	 * would therefore still blow the limit once wrapped, so leave clear headroom.
+	 */
+	const MAX_VALUE_DEPTH = 500;
 
 	/** @var Logger */
 	private $logger;
@@ -18,31 +32,52 @@ class Encoder {
 	/**
 	 * Decode a raw stored value (as returned by $wpdb) into a JSON-safe value.
 	 *
+	 * Only containers are unserialized. A serialized scalar (`i:0;`, `b:0;`,
+	 * `d:1.5;`) is left as its stored string: WordPress re-serializes arrays and
+	 * objects on write but not scalars, so unwrapping one here would silently
+	 * change what the destination stores.
+	 *
 	 * @param string     $entityType
 	 * @param int|string $entityId
 	 * @param string     $key         Field name for diagnostics (e.g. meta key, option name).
-	 * @param string     $raw         The stored value, slashed.
+	 * @param string     $raw         The stored value.
 	 * @return mixed
 	 */
 	public function decodeStored( $entityType, $entityId, $key, $raw ) {
-		$unslashed = wp_unslash( $raw );
-
-		if ( ! is_string( $unslashed ) || ! self::looksSerialized( $unslashed ) ) {
-			return $unslashed;
+		if ( ! is_string( $raw ) || ! self::looksSerialized( $raw ) ) {
+			return $raw;
 		}
 
 		// Detect & report objects without losing the structure.
-		$value = $this->tryUnserialize( $unslashed );
+		$value = $this->tryUnserialize( $raw );
 		if ( $value instanceof DecodeFailure ) {
 			$this->logger->warn(
 				$entityType,
 				$entityId,
 				"key={$key}: failed to unserialize, keeping raw string"
 			);
-			return $unslashed;
+			return $raw;
 		}
 
-		return $this->castObjectsRecursive( $value, $entityType, $entityId, $key );
+		if ( ! is_array( $value ) && ! is_object( $value ) ) {
+			return $raw;
+		}
+
+		$value = $this->castObjectsRecursive( $value, $entityType, $entityId, $key );
+
+		// A value json_encode cannot represent (nesting past its depth limit, INF/NAN
+		// from a float cast) would otherwise throw and take the whole entity out of
+		// the export with it. The raw string always encodes, so fall back to it.
+		if ( ! self::isEncodable( $value ) ) {
+			$this->logger->warn(
+				$entityType,
+				$entityId,
+				"key={$key}: not representable as JSON, keeping raw string"
+			);
+			return $raw;
+		}
+
+		return $value;
 	}
 
 	/**
@@ -67,6 +102,16 @@ class Encoder {
 			}
 		}
 		return $value;
+	}
+
+	/**
+	 * Can json_encode represent this value at the depth Json::encode will use?
+	 *
+	 * @param mixed $value
+	 * @return bool
+	 */
+	private static function isEncodable( $value ) {
+		return false !== json_encode( $value, 0, self::MAX_VALUE_DEPTH ); // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode
 	}
 
 	/**

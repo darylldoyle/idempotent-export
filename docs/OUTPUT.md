@@ -37,9 +37,14 @@
 
 ### Slashing
 
-`$wpdb` returns content as stored — which on WordPress means slashed.
-The exporter calls `wp_unslash()` once on every string before encoding,
-so content does not gain or lose backslashes across re-export cycles.
+Strings are written exactly as `$wpdb` returns them.
+
+Slashing is WordPress's convention for data on its way *into*
+`wp_insert_post()` and friends, which unslash it before storing — so what
+comes back out of the database is already unslashed. Unslashing it again
+on the way to the snapshot would strip real backslashes out of regexes,
+Windows paths and escaped JSON. The importer re-slashes on the way in,
+because that is what the write APIs expect.
 
 ### Meta shape
 
@@ -62,7 +67,7 @@ insertion order.
 
 ### Serialised values
 
-PHP-serialised values stored in `*_meta` or `wp_options` are
+PHP-serialised **containers** stored in `*_meta` or `wp_options` are
 unserialised and re-encoded as JSON:
 
 - Plain arrays round-trip cleanly.
@@ -73,6 +78,14 @@ unserialised and re-encoded as JSON:
   `__PHP_Incomplete_Class_Name` key after the cast.
 - Values that fail to unserialize are kept as the raw string, with a
   warning.
+- So are values JSON cannot represent — nesting past 500 levels, or a
+  non-finite float. Encoding one would fail and take its whole entity out
+  of the export; degrading the single value keeps the entity.
+
+A serialised **scalar** (`b:0;`, `i:0;`, `d:1.5;`) is left as its stored
+string. WordPress re-serialises arrays and objects on write but not
+scalars, so unwrapping one here would change what the destination stores:
+`b:0;` would arrive as `""` and `d:1.5;` as `"1.5"`, losing the type.
 
 ### Empty objects vs empty arrays
 
