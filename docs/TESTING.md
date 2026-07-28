@@ -20,7 +20,12 @@ Or directly:
 ./vendor/bin/pest tests/Feature/RunTest.php
 ```
 
-Requirements: PHP 8.1+, `pdo_sqlite` extension.
+Requirements: PHP 8.2+, `pdo_sqlite` extension.
+
+The lockfile is resolved against a platform pin of PHP 8.2 (see
+`config.platform.php` in `composer.json`) so `composer install` works
+identically on 8.2, 8.3 and 8.4 — dev tooling versions don't jump to a
+release that requires a newer PHP than the matrix supports.
 
 ## Suite layout
 
@@ -166,17 +171,20 @@ run it, then inspect `listTree($writer->root())` and `readJson(path)`.
 
 ## CI
 
-The suite is fast enough (<1s) to run on every push without thought.
-Recommended GitHub Actions config:
+The suite runs in GitHub Actions via
+[`.github/workflows/tests.yml`](../.github/workflows/tests.yml) on every
+push and pull request. The workflow is a single job that fans out across
+PHP 8.2 / 8.3 / 8.4 in parallel:
 
-```yaml
-- uses: shivammathur/setup-php@v2
-  with:
-    php-version: '8.2'
-    extensions: pdo_sqlite, sqlite3
-- run: composer install --no-progress --prefer-dist
-- run: composer test
-```
+- `shivammathur/setup-php` installs the PHP version with `pdo_sqlite`
+  and `sqlite3` extensions.
+- `ramsey/composer-install` installs and caches Composer dependencies.
+- `php -l` lints every file under `src/`.
+- `./vendor/bin/pest` runs the full suite.
+
+A `concurrency` block cancels superseded runs on the same ref so a
+rapid-fire push doesn't queue up stale jobs.
 
 No external services, no MySQL, no WordPress install required — the
-shim layer covers everything.
+shim layer covers everything, and the whole matrix completes in under a
+minute on a warm cache.

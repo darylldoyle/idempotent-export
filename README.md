@@ -1,5 +1,7 @@
 # WP Idempotent Export
 
+[![Tests](https://github.com/darylldoyle/idempotent-export/actions/workflows/tests.yml/badge.svg)](https://github.com/darylldoyle/idempotent-export/actions/workflows/tests.yml)
+
 A WP-CLI command that exports a single WordPress site as a deterministic
 directory tree of JSON files, designed to be re-imported into another
 WordPress site **without** wiping the destination between runs.
@@ -63,7 +65,7 @@ Or include it as a Composer dependency in a larger plugin/mu-plugin
 bundle. The plugin only registers itself when `WP_CLI` is loaded, so it
 has no front-end cost.
 
-PHP 7.4+ for the runtime. PHP 8.1+ for the test suite.
+PHP 7.4+ for the runtime. PHP 8.2+ for the test suite.
 
 ## Quickstart
 
