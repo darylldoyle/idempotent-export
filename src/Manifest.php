@@ -100,11 +100,14 @@ class Manifest {
 	private function fetchAutoIncrements() {
 		global $wpdb;
 
+		// term_taxonomy has its own sequence, and an importer preserving term IDs has
+		// to raise both or a term created after the migration reuses a migrated ttid.
 		$map = array(
-			'posts'    => $wpdb->posts,
-			'terms'    => $wpdb->terms,
-			'users'    => $wpdb->users,
-			'comments' => $wpdb->comments,
+			'posts'         => $wpdb->posts,
+			'terms'         => $wpdb->terms,
+			'term_taxonomy' => $wpdb->term_taxonomy,
+			'users'         => $wpdb->users,
+			'comments'      => $wpdb->comments,
 		);
 		$tables = array_values( $map );
 		$placeholders = implode( ',', array_fill( 0, count( $tables ), '%s' ) );

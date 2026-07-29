@@ -115,10 +115,11 @@ empty — so the importer doesn't have to special-case empty inputs.
   "skipped": [],
   "source": {
     "auto_increment": {
-      "comments": 192341,
-      "posts":    4823901,
-      "terms":    12453,
-      "users":    8821
+      "comments":      192341,
+      "posts":         4823901,
+      "term_taxonomy": 12461,
+      "terms":         12453,
+      "users":         8821
     },
     "blog_id":      5,
     "is_multisite": true,
@@ -133,7 +134,10 @@ empty — so the importer doesn't have to special-case empty inputs.
 - `source.auto_increment` snapshots the source's per-table
   `AUTO_INCREMENT` values from `information_schema.tables`. Importers
   can detect ID-collision risk across multiple export runs against the
-  same source over time.
+  same source over time, and an importer preserving source IDs raises the
+  destination's counters to these values so new content cannot reuse a
+  migrated ID. `terms` and `term_taxonomy` are separate sequences and both
+  are recorded.
 - `skipped` is a sorted (by type, then id) list of `{type, id, reason}`
   entries for any entity that couldn't be written.
 
