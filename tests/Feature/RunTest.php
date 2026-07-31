@@ -203,10 +203,11 @@ it('records filters_applied in the manifest', function (): void {
 it('captures auto_increment snapshot per table from the source DB', function (): void {
     $wpdb = FakeWpdb::current();
     $wpdb->autoIncrement = [
-        'wp_posts'    => 9001,
-        'wp_terms'    => 200,
-        'wp_users'    => 50,
-        'wp_comments' => 1500,
+        'wp_posts'         => 9001,
+        'wp_terms'         => 200,
+        'wp_term_taxonomy' => 214,
+        'wp_users'         => 50,
+        'wp_comments'      => 1500,
     ];
     seedRunFixture($wpdb);
     $out = tmpdir();
@@ -215,9 +216,10 @@ it('captures auto_increment snapshot per table from the source DB', function ():
     $m = readJson("$out/manifest.json");
     // Round-tripped through Json::encode, so keys are alphabetised.
     expect($m['source']['auto_increment'])->toBe([
-        'comments' => 1500,
-        'posts'    => 9001,
-        'terms'    => 200,
-        'users'    => 50,
+        'comments'      => 1500,
+        'posts'         => 9001,
+        'term_taxonomy' => 214,
+        'terms'         => 200,
+        'users'         => 50,
     ]);
 });

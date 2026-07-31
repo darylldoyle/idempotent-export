@@ -13,10 +13,11 @@ it('exposes the schema version constant', function (): void {
 it('captures source info including AUTO_INCREMENT from the wpdb wrapper', function (): void {
     $wpdb = FakeWpdb::current();
     $wpdb->autoIncrement = [
-        'wp_posts'    => 100,
-        'wp_terms'    => 50,
-        'wp_users'    => 7,
-        'wp_comments' => 30,
+        'wp_posts'         => 100,
+        'wp_terms'         => 50,
+        'wp_term_taxonomy' => 58,
+        'wp_users'         => 7,
+        'wp_comments'      => 30,
     ];
 
     $m = new Manifest();
@@ -27,10 +28,11 @@ it('captures source info including AUTO_INCREMENT from the wpdb wrapper', functi
 
     expect($out['schema_version'])->toBe('1.0.0');
     expect($out['source']['auto_increment'])->toBe([
-        'posts'    => 100,
-        'terms'    => 50,
-        'users'    => 7,
-        'comments' => 30,
+        'posts'         => 100,
+        'terms'         => 50,
+        'term_taxonomy' => 58,
+        'users'         => 7,
+        'comments'      => 30,
     ]);
     expect($out['source']['blog_id'])->toBeNull();
     expect($out['source']['is_multisite'])->toBeFalse();
