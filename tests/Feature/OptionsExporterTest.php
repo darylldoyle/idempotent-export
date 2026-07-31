@@ -72,8 +72,8 @@ it('excludes regular and site transients', function (): void {
 it('unserialises PHP-serialised option values', function (): void {
     $wpdb    = FakeWpdb::current();
     $payload = ['template' => 'twentytwentyfour', 'stylesheet' => 'twentytwentyfour'];
-    Fixtures::insertOption($wpdb, 'active_plugins', addslashes(serialize(['akismet/akismet.php'])));
-    Fixtures::insertOption($wpdb, 'theme_mods', addslashes(serialize($payload)));
+    Fixtures::insertOption($wpdb, 'active_plugins', serialize(['akismet/akismet.php']));
+    Fixtures::insertOption($wpdb, 'theme_mods', serialize($payload));
 
     $e = makeOptionsExporter();
     $e->run();

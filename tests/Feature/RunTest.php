@@ -30,7 +30,7 @@ function seedRunFixture(FakeWpdb $wpdb): array
     ]);
 
     Fixtures::insertPostMeta($wpdb, $p1, '_thumbnail_id', '99');
-    Fixtures::insertPostMeta($wpdb, $p2, 'custom', addslashes(serialize(['k' => 'v'])));
+    Fixtures::insertPostMeta($wpdb, $p2, 'custom', serialize(['k' => 'v']));
 
     Fixtures::assignTerm($wpdb, $p1, $catA['term_taxonomy_id']);
     Fixtures::assignTerm($wpdb, $p1, $catB['term_taxonomy_id']);

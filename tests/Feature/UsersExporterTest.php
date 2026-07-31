@@ -55,10 +55,10 @@ it('strips the password hash', function (): void {
 it('strips session_tokens and _application_passwords from usermeta', function (): void {
     $wpdb = FakeWpdb::current();
     $id   = Fixtures::insertUser($wpdb);
-    Fixtures::insertUserMeta($wpdb, $id, 'session_tokens', addslashes(serialize(['hash' => 'secret'])));
-    Fixtures::insertUserMeta($wpdb, $id, '_application_passwords', addslashes(serialize(['uuid' => 'abc'])));
+    Fixtures::insertUserMeta($wpdb, $id, 'session_tokens', serialize(['hash' => 'secret']));
+    Fixtures::insertUserMeta($wpdb, $id, '_application_passwords', serialize(['uuid' => 'abc']));
     Fixtures::insertUserMeta($wpdb, $id, 'nickname', 'alice');
-    Fixtures::insertUserMeta($wpdb, $id, 'wp_capabilities', addslashes(serialize(['administrator' => true])));
+    Fixtures::insertUserMeta($wpdb, $id, 'wp_capabilities', serialize(['administrator' => true]));
 
     $e = makeUsersExporter();
     $e->run();

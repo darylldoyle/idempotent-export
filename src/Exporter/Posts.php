@@ -57,7 +57,6 @@ class Posts extends AbstractExporter {
 					continue;
 				}
 
-				$row  = $this->unslashRow( $row );
 				$data = $this->buildPostData( $row, $metaByPost, $termsByPost, $commentsByPost );
 
 				list( $y, $m ) = $this->shardFromDate( $data['post_date_gmt'] );

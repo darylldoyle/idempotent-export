@@ -41,8 +41,6 @@ class Comments extends AbstractExporter {
 					continue;
 				}
 
-				$row = $this->unslashRow( $row );
-
 				$data = array(
 					'comment_ID'           => $commentId,
 					'comment_agent'        => (string) $row['comment_agent'],

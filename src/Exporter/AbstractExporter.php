@@ -85,21 +85,6 @@ abstract class AbstractExporter {
 	}
 
 	/**
-	 * Apply wp_unslash to every string in a row.
-	 *
-	 * @param array $row
-	 * @return array
-	 */
-	protected function unslashRow( array $row ) {
-		foreach ( $row as $k => $v ) {
-			if ( is_string( $v ) ) {
-				$row[ $k ] = wp_unslash( $v );
-			}
-		}
-		return $row;
-	}
-
-	/**
 	 * @param string $message
 	 * @param int    $count
 	 * @return object  Either a cli progress bar or a NoOp.

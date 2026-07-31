@@ -10,33 +10,76 @@ beforeEach(function (): void {
     $this->encoder = new Encoder($this->logger);
 });
 
-it('returns plain scalar strings unchanged after unslashing', function (): void {
+it('returns plain scalar strings unchanged', function (): void {
     $value = $this->encoder->decodeStored('post', 1, '_thumbnail_id', '8821');
     expect($value)->toBe('8821');
 });
 
-it('unslashes wpdb-style escaped strings', function (): void {
-    $value = $this->encoder->decodeStored('post', 1, 'note', 'It\\\'s fine');
-    expect($value)->toBe("It's fine");
+it('keeps backslashes verbatim (stored values are not slashed)', function (): void {
+    $raw   = 'C:\\Users\\test\\file.txt \\d+';
+    $value = $this->encoder->decodeStored('post', 1, 'path', $raw);
+    expect($value)->toBe($raw);
+});
+
+it('keeps escaped quotes verbatim', function (): void {
+    $raw   = 'He said \\"hi\\" and it\'s fine';
+    $value = $this->encoder->decodeStored('post', 1, 'note', $raw);
+    expect($value)->toBe($raw);
 });
 
 it('round-trips a serialised array as a native array', function (): void {
-    $raw    = addslashes(serialize(['items' => [1, 2, 3], 'layout' => 'grid']));
-    $value  = $this->encoder->decodeStored('post', 7, 'custom', $raw);
+    $raw   = serialize(['items' => [1, 2, 3], 'layout' => 'grid']);
+    $value = $this->encoder->decodeStored('post', 7, 'custom', $raw);
     expect($value)->toBe(['items' => [1, 2, 3], 'layout' => 'grid']);
 });
 
-it('preserves serialized scalar false (b:0;) without flagging decode failure', function (): void {
-    $value = $this->encoder->decodeStored('opt', 0, 'flag', addslashes(serialize(false)));
-    expect($value)->toBeFalse();
+it('unserialises containers whose contents contain backslashes', function (): void {
+    $raw   = serialize(['pattern' => '/^\\d+$/', 'path' => 'C:\\tmp']);
+    $value = $this->encoder->decodeStored('post', 7, 'regex', $raw);
+    expect($value)->toBe(['pattern' => '/^\\d+$/', 'path' => 'C:\\tmp']);
+    expect($this->logger->warnCount())->toBe(0);
+});
+
+it('keeps serialised scalars as their stored string', function (array $native): void {
+    $raw   = serialize($native[0]);
+    $value = $this->encoder->decodeStored('opt', 0, 'flag', $raw);
+    expect($value)->toBe($raw);
+    expect($this->logger->warnCount())->toBe(0);
+})->with([
+    'false'  => [[false]],
+    'true'   => [[true]],
+    'int'    => [[0]],
+    'float'  => [[1.5]],
+    'string' => [['hello']],
+    'null'   => [[null]],
+]);
+
+it('keeps the raw string when a container nests past json_encode depth', function (): void {
+    $deep = 'leaf';
+    for ($i = 0; $i < 600; $i++) {
+        $deep = [$deep];
+    }
+
+    $value = $this->encoder->decodeStored('post', 14, 'deep', serialize($deep));
+
+    expect($value)->toBeString();
+    expect($this->logger->warnCount())->toBe(1);
+    expect($this->logger->skipCount())->toBe(0);
+});
+
+it('keeps the raw string when a container holds a non-finite float', function (): void {
+    $raw   = serialize(['n' => NAN]);
+    $value = $this->encoder->decodeStored('post', 15, 'nan', $raw);
+
+    expect($value)->toBe($raw);
+    expect($this->logger->warnCount())->toBe(1);
 });
 
 it('casts serialised objects to associative arrays and warns', function (): void {
     $obj      = new stdClass();
     $obj->foo = 'bar';
-    $raw      = addslashes(serialize($obj));
 
-    $value = $this->encoder->decodeStored('post', 9, 'objmeta', $raw);
+    $value = $this->encoder->decodeStored('post', 9, 'objmeta', serialize($obj));
 
     expect($value)->toBeArray();
     expect($value['foo'])->toBe('bar');
@@ -47,13 +90,12 @@ it('casts serialised objects to associative arrays and warns', function (): void
 });
 
 it('recursively casts nested objects', function (): void {
-    $inner       = new stdClass();
-    $inner->name = 'inner';
-    $outer       = new stdClass();
+    $inner        = new stdClass();
+    $inner->name  = 'inner';
+    $outer        = new stdClass();
     $outer->inner = $inner;
-    $raw          = addslashes(serialize($outer));
 
-    $value = $this->encoder->decodeStored('post', 10, 'nested', $raw);
+    $value = $this->encoder->decodeStored('post', 10, 'nested', serialize($outer));
 
     expect($value)->toBeArray();
     expect($value['inner'])->toBeArray();
@@ -62,7 +104,7 @@ it('recursively casts nested objects', function (): void {
 });
 
 it('keeps the raw string and warns when unserialize fails', function (): void {
-    $raw = 'a:5:{not valid';
+    $raw   = 'a:5:{not valid';
     $value = $this->encoder->decodeStored('post', 11, 'broken', $raw);
     expect($value)->toBe('a:5:{not valid');
     expect($this->logger->warnCount())->toBe(1);
