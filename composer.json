@@ -1,7 +1,7 @@
 {
     "name": "fueled/idempotent-export",
     "description": "WP-CLI command that exports a WordPress site as a deterministic tree of JSON files.",
-    "type": "wp-cli-package",
+    "type": "wordpress-plugin",
     "license": "MIT",
     "require": {
         "php": "^8.2"
