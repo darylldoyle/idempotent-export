@@ -10,10 +10,26 @@ class Users extends AbstractExporter {
 	 *
 	 * @var string[]
 	 */
-	private $strippedMeta = array(
+	protected $strippedMeta = array(
 		'session_tokens',
 		'_application_passwords',
 	);
+
+	/** Blog-prefixed meta whose serialized payload embeds a whole WP_User, password hash included. */
+	protected $strippedMetaSuffixes = array( 'yoast_notifications' );
+
+	/** Exact match, or a `wp_`/`wp_<blog>_` prefixed form of a stripped suffix. */
+	protected function isStripped( $key ) {
+		if ( in_array( $key, $this->strippedMeta, true ) ) {
+			return true;
+		}
+		foreach ( $this->strippedMetaSuffixes as $suffix ) {
+			if ( $key === $suffix || substr( $key, -( strlen( $suffix ) + 1 ) ) === '_' . $suffix ) {
+				return true;
+			}
+		}
+		return false;
+	}
 
 	public function run() {
 		global $wpdb;
@@ -142,7 +158,7 @@ class Users extends AbstractExporter {
 		$out    = array();
 		foreach ( (array) $rows as $r ) {
 			$key = (string) $r['meta_key'];
-			if ( in_array( $key, $this->strippedMeta, true ) ) {
+			if ( $this->isStripped( $key ) ) {
 				continue;
 			}
 			$uid                   = (int) $r['user_id'];
