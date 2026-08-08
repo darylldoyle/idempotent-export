@@ -36,9 +36,12 @@ it('preserves serialized scalar false (b:0;) without flagging decode failure', f
 it('casts serialised objects to associative arrays and warns', function (): void {
     $obj      = new stdClass();
     $obj->foo = 'bar';
+<<<<<<< HEAD
     $raw      = serialize($obj);
+=======
+>>>>>>> claude/wp-idempotent-export-q6Nqv
 
-    $value = $this->encoder->decodeStored('post', 9, 'objmeta', $raw);
+    $value = $this->encoder->decodeStored('post', 9, 'objmeta', serialize($obj));
 
     expect($value)->toBeArray();
     expect($value['foo'])->toBe('bar');
@@ -49,13 +52,16 @@ it('casts serialised objects to associative arrays and warns', function (): void
 });
 
 it('recursively casts nested objects', function (): void {
-    $inner       = new stdClass();
-    $inner->name = 'inner';
-    $outer       = new stdClass();
+    $inner        = new stdClass();
+    $inner->name  = 'inner';
+    $outer        = new stdClass();
     $outer->inner = $inner;
+<<<<<<< HEAD
     $raw          = serialize($outer);
+=======
+>>>>>>> claude/wp-idempotent-export-q6Nqv
 
-    $value = $this->encoder->decodeStored('post', 10, 'nested', $raw);
+    $value = $this->encoder->decodeStored('post', 10, 'nested', serialize($outer));
 
     expect($value)->toBeArray();
     expect($value['inner'])->toBeArray();
@@ -64,7 +70,7 @@ it('recursively casts nested objects', function (): void {
 });
 
 it('keeps the raw string and warns when unserialize fails', function (): void {
-    $raw = 'a:5:{not valid';
+    $raw   = 'a:5:{not valid';
     $value = $this->encoder->decodeStored('post', 11, 'broken', $raw);
     expect($value)->toBe('a:5:{not valid');
     expect($this->logger->warnCount())->toBe(1);

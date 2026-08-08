@@ -195,6 +195,42 @@ it('unserialises PHP-serialised meta into nested JSON structures', function (): 
     expect($data['meta']['custom_related_posts'])->toBe([$payload]);
 });
 
+it('still exports a post whose meta cannot be represented as JSON', function (): void {
+    $wpdb = FakeWpdb::current();
+    $id   = Fixtures::insertPost($wpdb);
+
+    $deep = 'leaf';
+    for ($i = 0; $i < 600; $i++) {
+        $deep = [$deep];
+    }
+    Fixtures::insertPostMeta($wpdb, $id, 'sane', 'kept');
+    Fixtures::insertPostMeta($wpdb, $id, 'too_deep', serialize($deep));
+
+    $e = makePostsExporter();
+    $e->run();
+    $data = readJson(invade($e)->writer->root() . "/posts/2024/03/{$id}.json");
+
+    // The post survives, the offending key degrades to its stored string.
+    expect($data['ID'])->toBe($id);
+    expect($data['meta']['sane'])->toBe(['kept']);
+    expect($data['meta']['too_deep'][0])->toBeString();
+    expect(invade($e)->logger->skipCount())->toBe(0);
+});
+
+it('preserves backslashes in post content and meta', function (): void {
+    $wpdb    = FakeWpdb::current();
+    $content = 'Match with /^\\d+$/ then C:\\Users\\test';
+    $id      = Fixtures::insertPost($wpdb, ['post_content' => $content]);
+    Fixtures::insertPostMeta($wpdb, $id, 'pattern', '/\\w+\\\\/');
+
+    $e = makePostsExporter();
+    $e->run();
+    $data = readJson(invade($e)->writer->root() . "/posts/2024/03/{$id}.json");
+
+    expect($data['post_content'])->toBe($content);
+    expect($data['meta']['pattern'])->toBe(['/\\w+\\\\/']);
+});
+
 it('paginates correctly past batch boundaries', function (): void {
     $wpdb = FakeWpdb::current();
     for ($i = 0; $i < 7; $i++) {

@@ -8,6 +8,16 @@ namespace IdempotentExport;
  */
 class Encoder {
 
+	/**
+	 * How deep a decoded value may nest and still be written to the snapshot.
+	 *
+	 * Json::encode() and the importer's json_decode() both work to PHP's default
+	 * limit of 512, and a meta value sits several levels down inside its entity
+	 * (entity -> meta -> key -> values -> value). Accepting a value at the full 512
+	 * would therefore still blow the limit once wrapped, so leave clear headroom.
+	 */
+	const MAX_VALUE_DEPTH = 500;
+
 	/** @var Logger */
 	private $logger;
 
@@ -17,6 +27,11 @@ class Encoder {
 
 	/**
 	 * Decode a raw stored value (as returned by $wpdb) into a JSON-safe value.
+	 *
+	 * Only containers are unserialized. A serialized scalar (`i:0;`, `b:0;`,
+	 * `d:1.5;`) is left as its stored string: WordPress re-serializes arrays and
+	 * objects on write but not scalars, so unwrapping one here would silently
+	 * change what the destination stores.
 	 *
 	 * @param string     $entityType
 	 * @param int|string $entityId
@@ -40,7 +55,25 @@ class Encoder {
 			return $raw;
 		}
 
-		return $this->castObjectsRecursive( $value, $entityType, $entityId, $key );
+		if ( ! is_array( $value ) && ! is_object( $value ) ) {
+			return $raw;
+		}
+
+		$value = $this->castObjectsRecursive( $value, $entityType, $entityId, $key );
+
+		// A value json_encode cannot represent (nesting past its depth limit, INF/NAN
+		// from a float cast) would otherwise throw and take the whole entity out of
+		// the export with it. The raw string always encodes, so fall back to it.
+		if ( ! self::isEncodable( $value ) ) {
+			$this->logger->warn(
+				$entityType,
+				$entityId,
+				"key={$key}: not representable as JSON, keeping raw string"
+			);
+			return $raw;
+		}
+
+		return $value;
 	}
 
 	/**
@@ -65,6 +98,16 @@ class Encoder {
 			}
 		}
 		return $value;
+	}
+
+	/**
+	 * Can json_encode represent this value at the depth Json::encode will use?
+	 *
+	 * @param mixed $value
+	 * @return bool
+	 */
+	private static function isEncodable( $value ) {
+		return false !== json_encode( $value, 0, self::MAX_VALUE_DEPTH ); // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode
 	}
 
 	/**
