@@ -20,11 +20,6 @@ class _AbstractProbe extends AbstractExporter
     {
         return $this->shardFromDate($d);
     }
-
-    public function probeUnslashRow(array $row): array
-    {
-        return $this->unslashRow($row);
-    }
 }
 
 beforeEach(function (): void {
@@ -50,17 +45,3 @@ it('falls back to 0000/00 for missing or invalid GMT dates', function (): void {
     expect($this->probe->probeShardFromDate('0000-00-00 00:00:00'))->toBe(['0000', '00']);
 });
 
-it('unslashes every string field in a row but leaves non-strings alone', function (): void {
-    $row = [
-        'ID'           => 7,
-        'post_title'   => "It\\'s fine",
-        'menu_order'   => 0,
-        'post_content' => 'Already \\\\ escaped',
-    ];
-    $out = $this->probe->probeUnslashRow($row);
-
-    expect($out['ID'])->toBe(7);
-    expect($out['menu_order'])->toBe(0);
-    expect($out['post_title'])->toBe("It's fine");
-    expect($out['post_content'])->toBe('Already \\ escaped');
-});

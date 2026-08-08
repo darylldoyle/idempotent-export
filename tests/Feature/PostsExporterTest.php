@@ -186,7 +186,7 @@ it('unserialises PHP-serialised meta into nested JSON structures', function (): 
     $wpdb = FakeWpdb::current();
     $id   = Fixtures::insertPost($wpdb);
     $payload = ['items' => [201, 305, 419], 'layout' => 'grid'];
-    Fixtures::insertPostMeta($wpdb, $id, 'custom_related_posts', addslashes(serialize($payload)));
+    Fixtures::insertPostMeta($wpdb, $id, 'custom_related_posts', serialize($payload));
 
     $e = makePostsExporter();
     $e->run();

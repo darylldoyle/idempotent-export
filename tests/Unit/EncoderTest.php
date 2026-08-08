@@ -10,31 +10,33 @@ beforeEach(function (): void {
     $this->encoder = new Encoder($this->logger);
 });
 
-it('returns plain scalar strings unchanged after unslashing', function (): void {
+it('returns plain scalar strings unchanged', function (): void {
     $value = $this->encoder->decodeStored('post', 1, '_thumbnail_id', '8821');
     expect($value)->toBe('8821');
 });
 
-it('unslashes wpdb-style escaped strings', function (): void {
-    $value = $this->encoder->decodeStored('post', 1, 'note', 'It\\\'s fine');
-    expect($value)->toBe("It's fine");
+it('keeps backslashes in stored values verbatim so JSON escapes survive', function (): void {
+    $raw   = '[{"content":"<a href=\\"https:\\/\\/x.test\\">A<\\/a>"}]';
+    $value = $this->encoder->decodeStored('post', 1, 'footnotes', $raw);
+    expect($value)->toBe($raw);
+    expect(json_decode($value, true))->toBeArray();
 });
 
 it('round-trips a serialised array as a native array', function (): void {
-    $raw    = addslashes(serialize(['items' => [1, 2, 3], 'layout' => 'grid']));
+    $raw    = serialize(['items' => [1, 2, 3], 'layout' => 'grid']);
     $value  = $this->encoder->decodeStored('post', 7, 'custom', $raw);
     expect($value)->toBe(['items' => [1, 2, 3], 'layout' => 'grid']);
 });
 
 it('preserves serialized scalar false (b:0;) without flagging decode failure', function (): void {
-    $value = $this->encoder->decodeStored('opt', 0, 'flag', addslashes(serialize(false)));
+    $value = $this->encoder->decodeStored('opt', 0, 'flag', serialize(false));
     expect($value)->toBeFalse();
 });
 
 it('casts serialised objects to associative arrays and warns', function (): void {
     $obj      = new stdClass();
     $obj->foo = 'bar';
-    $raw      = addslashes(serialize($obj));
+    $raw      = serialize($obj);
 
     $value = $this->encoder->decodeStored('post', 9, 'objmeta', $raw);
 
@@ -51,7 +53,7 @@ it('recursively casts nested objects', function (): void {
     $inner->name = 'inner';
     $outer       = new stdClass();
     $outer->inner = $inner;
-    $raw          = addslashes(serialize($outer));
+    $raw          = serialize($outer);
 
     $value = $this->encoder->decodeStored('post', 10, 'nested', $raw);
 

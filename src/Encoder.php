@@ -3,8 +3,8 @@
 namespace IdempotentExport;
 
 /**
- * Handles the meta-value pipeline: unslash, maybe-unserialize, cast objects
- * down to arrays. Warns the Logger on lossy transforms.
+ * Handles the meta-value pipeline: maybe-unserialize, cast objects down to
+ * arrays. Warns the Logger on lossy transforms.
  */
 class Encoder {
 
@@ -21,25 +21,23 @@ class Encoder {
 	 * @param string     $entityType
 	 * @param int|string $entityId
 	 * @param string     $key         Field name for diagnostics (e.g. meta key, option name).
-	 * @param string     $raw         The stored value, slashed.
+	 * @param string     $raw         The stored value exactly as $wpdb returned it — never slashed.
 	 * @return mixed
 	 */
 	public function decodeStored( $entityType, $entityId, $key, $raw ) {
-		$unslashed = wp_unslash( $raw );
-
-		if ( ! is_string( $unslashed ) || ! self::looksSerialized( $unslashed ) ) {
-			return $unslashed;
+		if ( ! is_string( $raw ) || ! self::looksSerialized( $raw ) ) {
+			return $raw;
 		}
 
 		// Detect & report objects without losing the structure.
-		$value = $this->tryUnserialize( $unslashed );
+		$value = $this->tryUnserialize( $raw );
 		if ( $value instanceof DecodeFailure ) {
 			$this->logger->warn(
 				$entityType,
 				$entityId,
 				"key={$key}: failed to unserialize, keeping raw string"
 			);
-			return $unslashed;
+			return $raw;
 		}
 
 		return $this->castObjectsRecursive( $value, $entityType, $entityId, $key );

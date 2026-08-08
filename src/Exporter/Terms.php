@@ -59,9 +59,8 @@ class Terms extends AbstractExporter {
 				$ttId   = (int) $row['term_taxonomy_id'];
 				$lastTt = $ttId;
 
-				$row = $this->unslashRow( $row );
-
 				$termId = (int) $row['term_id'];
+
 				$data = array(
 					'count'            => (int) $row['count'],
 					'description'      => (string) $row['description'],
