@@ -30,16 +30,13 @@ it('round-trips a serialised array as a native array', function (): void {
 
 it('preserves serialized scalar false (b:0;) without flagging decode failure', function (): void {
     $value = $this->encoder->decodeStored('opt', 0, 'flag', serialize(false));
-    expect($value)->toBeFalse();
+    expect($value)->toBe('b:0;');
+    expect($this->logger->warnCount())->toBe(0);
 });
 
 it('casts serialised objects to associative arrays and warns', function (): void {
     $obj      = new stdClass();
     $obj->foo = 'bar';
-<<<<<<< HEAD
-    $raw      = serialize($obj);
-=======
->>>>>>> claude/wp-idempotent-export-q6Nqv
 
     $value = $this->encoder->decodeStored('post', 9, 'objmeta', serialize($obj));
 
@@ -56,10 +53,6 @@ it('recursively casts nested objects', function (): void {
     $inner->name  = 'inner';
     $outer        = new stdClass();
     $outer->inner = $inner;
-<<<<<<< HEAD
-    $raw          = serialize($outer);
-=======
->>>>>>> claude/wp-idempotent-export-q6Nqv
 
     $value = $this->encoder->decodeStored('post', 10, 'nested', serialize($outer));
 
