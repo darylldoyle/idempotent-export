@@ -20,7 +20,6 @@ class _AbstractProbe extends AbstractExporter
     {
         return $this->shardFromDate($d);
     }
-
 }
 
 beforeEach(function (): void {

@@ -60,6 +60,7 @@ class Terms extends AbstractExporter {
 				$lastTt = $ttId;
 
 				$termId = (int) $row['term_id'];
+
 				$data = array(
 					'count'            => (int) $row['count'],
 					'description'      => (string) $row['description'],

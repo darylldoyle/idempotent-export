@@ -3,12 +3,8 @@
 namespace IdempotentExport;
 
 /**
- * Handles the meta-value pipeline: maybe-unserialize containers, cast objects
- * down to arrays. Warns the Logger on lossy transforms.
- *
- * Values are taken verbatim from $wpdb. Stored data is *not* slashed — slashing
- * is only WordPress's convention for data on its way *into* the insert/update
- * APIs — so unslashing on the way out would destroy real backslashes.
+ * Handles the meta-value pipeline: maybe-unserialize, cast objects down to
+ * arrays. Warns the Logger on lossy transforms.
  */
 class Encoder {
 
@@ -40,7 +36,7 @@ class Encoder {
 	 * @param string     $entityType
 	 * @param int|string $entityId
 	 * @param string     $key         Field name for diagnostics (e.g. meta key, option name).
-	 * @param string     $raw         The stored value.
+	 * @param string     $raw         The stored value exactly as $wpdb returned it — never slashed.
 	 * @return mixed
 	 */
 	public function decodeStored( $entityType, $entityId, $key, $raw ) {
